@@ -69,23 +69,40 @@ class Fxg(Tk):
         folder_selected = filedialog.askdirectory()
 
         video_url= self.urlentry.get()
-        
+
+        self.progress = Progressbar(orient=HORIZONTAL,length=100,  mode='indeterminate')
+        self.progress.grid( column = 2, row = 5)
+        self.update_idletasks()
+        self.progress['value'] += 30
+         
         newname = self.vidnameb.get()
         yt = YouTube(video_url)
         video = yt.streams.filter(only_audio=True).first()
         out_file = video.download(output_path=folder_selected)
         base, ext = os.path.splitext(out_file)
-        new_file = newname + '.mp3'
+        newfile = newname 
+        new_file = os.path.join(folder_selected, newname + '.mp3')
+        
+        
+
+        self.update_idletasks()
+        self.progress['value'] += 30
 
         audio = AudioSegment.from_file(out_file)
         audio.export(new_file, format="mp3")
+        print(new_file) 
+
+        self.update_idletasks()
+        self.progress['value'] += 30
         
         yt.streams.filter(mime_type="audio")
         a = yt.streams.get_audio_only()
         os.remove(out_file)
 
+        self.update_idletasks()
+        self.progress['value'] += 30
         
-    
+        self.progress.destroy() # get rid of the progress bar
         tk.messagebox.showinfo('Completed(YT MP3 downloader)','Download Complated') # pop up a done messgae
         self.vidnameb.delete(0, 'end') # clear video name entry box
         self.urlentry.delete(0, 'end') # clare url entery box
