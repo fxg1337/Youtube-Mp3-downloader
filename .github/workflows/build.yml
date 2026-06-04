@@ -47,7 +47,7 @@ jobs:
 
     - name: Rename EXE
       run: |
-        move dist/YoutubeMP3.exe YoutubeMP3-${{ steps.version.outputs.VERSION }}.exe
+        move dist/YoutubeMP3.exe ${{ steps.version.outputs.VERSION }}-YoutubeMP3.exe
 
   
     - name: Upload artifact
