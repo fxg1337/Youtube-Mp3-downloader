@@ -3,7 +3,7 @@ name: Build & Release EXE
 on:
   push:
     tags:
-      - "v*.*.*"   # triggers on version tags like v1.0.0
+      - "v*.*.*"
   workflow_dispatch:
 
 jobs:
@@ -14,40 +14,41 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
 
-    - name: Get version
-      id: version
-      run: |
-        if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-          echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-        else
-          echo "VERSION=dev-${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
-        fi
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller pytubefix pydub ffmpeg-python
+        pip install -r requirements.txt
 
-   
-    - name: Setup FFmpeg
+    - name: Install FFmpeg
       run: |
         choco install ffmpeg -y
         ffmpeg -version
 
+    - name: Get version
+      id: version
+      shell: powershell
+      run: |
+        if ($env:GITHUB_REF -like "refs/tags/*") {
+          $version = $env:GITHUB_REF.Replace("refs/tags/", "")
+        } else {
+          $version = "dev-" + $env:GITHUB_RUN_NUMBER
+        }
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
     - name: Build EXE
       run: |
-        pyinstaller --onefile ^
-                    --noconsole ^
-                    --icon=icon/icon.ico ^
-                    --name=YoutubeMP3-${{ steps.version.outputs.VERSION }} ^
+        pyinstaller --onefile `
+                    --noconsole `
+                    --icon=icon/icon.ico `
+                    --name=YoutubeMP3-${{ steps.version.outputs.VERSION }} `
                     pyfixmp3.py
 
-    - name: Rename output
+    - name: Rename EXE
       run: |
         move dist/YoutubeMP3-${{ steps.version.outputs.VERSION }}.exe YoutubeMP3.exe
 
@@ -57,11 +58,12 @@ jobs:
         name: YoutubeMP3
         path: YoutubeMP3.exe
 
-    - name: Create Release (only on tag)
+    - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2
       with:
-        files: YoutubeMP3.exe
         name: Release ${{ steps.version.outputs.VERSION }}
+        files: YoutubeMP3.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+``
