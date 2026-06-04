@@ -1,8 +1,9 @@
-name: Build EXE
+name: Build & Release EXE
 
 on:
   push:
-    branches: [ "main" ]
+    tags:
+      - "v*.*.*"   # triggers on version tags like v1.0.0
   workflow_dispatch:
 
 jobs:
@@ -10,7 +11,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v4
 
     - name: Set up Python
@@ -18,30 +19,49 @@ jobs:
       with:
         python-version: "3.11"
 
+    - name: Get version
+      id: version
+      run: |
+        if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+          echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+        else
+          echo "VERSION=dev-${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+        fi
+
     - name: Install dependencies
       run: |
-        pip install pyinstaller
-        pip install -r requirements.txt || echo "No requirements file"
+        python -m pip install --upgrade pip
+        pip install pyinstaller pytubefix pydub ffmpeg-python
 
-    - name: Build EXE with PyInstaller
+   
+    - name: Setup FFmpeg
+      run: |
+        choco install ffmpeg -y
+        ffmpeg -version
+
+    - name: Build EXE
       run: |
         pyinstaller --onefile ^
                     --noconsole ^
                     --icon=icon/icon.ico ^
-                    --name=YoutubeMP3 ^
+                    --name=YoutubeMP3-${{ steps.version.outputs.VERSION }} ^
                     pyfixmp3.py
 
-    - name: Upload EXE artifact
+    - name: Rename output
+      run: |
+        move dist/YoutubeMP3-${{ steps.version.outputs.VERSION }}.exe YoutubeMP3.exe
+
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: YoutubeMP3-EXE
-        path: dist/YoutubeMP3.exe
+        name: YoutubeMP3
+        path: YoutubeMP3.exe
 
-  
-    - name: Create GitHub Release
-      if: github.event_name == 'workflow_dispatch'
+    - name: Create Release (only on tag)
+      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2
       with:
-        files: dist/YoutubeMP3.exe
+        files: YoutubeMP3.exe
+        name: Release ${{ steps.version.outputs.VERSION }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
