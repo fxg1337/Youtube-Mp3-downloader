@@ -1,9 +1,8 @@
-name: Build & Release EXE
+name: Auto Build & Release EXE
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -13,6 +12,8 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Setup Python
       uses: actions/setup-python@v5
@@ -27,17 +28,13 @@ jobs:
     - name: Install FFmpeg
       run: |
         choco install ffmpeg -y
-        ffmpeg -version
 
-    - name: Get version
+    
+    - name: Generate version
       id: version
       shell: powershell
       run: |
-        if ($env:GITHUB_REF -like "refs/tags/*") {
-          $version = $env:GITHUB_REF.Replace("refs/tags/", "")
-        } else {
-          $version = "dev-" + $env:GITHUB_RUN_NUMBER
-        }
+        $version = "v1.0.$env:GITHUB_RUN_NUMBER"
         echo "VERSION=$version" >> $env:GITHUB_OUTPUT
 
     - name: Build EXE
@@ -45,25 +42,26 @@ jobs:
         pyinstaller --onefile `
                     --noconsole `
                     --icon=icon/icon.ico `
-                    --name=YoutubeMP3-${{ steps.version.outputs.VERSION }} `
+                    --name=YoutubeMP3 `
                     pyfixmp3.py
 
     - name: Rename EXE
       run: |
-        move dist/YoutubeMP3-${{ steps.version.outputs.VERSION }}.exe YoutubeMP3.exe
+        move dist/YoutubeMP3.exe YoutubeMP3-${{ steps.version.outputs.VERSION }}.exe
 
+  
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: YoutubeMP3
-        path: YoutubeMP3.exe
+        path: YoutubeMP3-${{ steps.version.outputs.VERSION }}.exe
 
+   
     - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ steps.version.outputs.VERSION }}
         name: Release ${{ steps.version.outputs.VERSION }}
-        files: YoutubeMP3.exe
+        files: ${{ steps.version.outputs.VERSION }}-YoutubeMP3.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
