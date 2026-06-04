@@ -1,0 +1,4 @@
+pyinstaller
+pytubefix
+pydub
+ffmpeg-python
