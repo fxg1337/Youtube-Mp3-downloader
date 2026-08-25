@@ -76,7 +76,7 @@ class Fxg(Tk):
         self.progress['value'] += 30
          
         newname = self.vidnameb.get()
-        yt = YouTube(video_url)
+        yt = YouTube(video_url, client='WEB')
         video = yt.streams.filter(only_audio=True).first()
         out_file = video.download(output_path=folder_selected)
         base, ext = os.path.splitext(out_file)
